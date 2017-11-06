@@ -8,11 +8,14 @@ import android.os.Environment;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +31,7 @@ public class VedioFragment extends Fragment {
     // the fragment initialization parameters, e.g. ARG_ITEM_NUMBER
     private static final String ARG_PARAM1 = "param1";
     private static final String ARG_PARAM2 = "param2";
+    private static final String TAG = "VedioFragment";
     @BindView(R.id.surface_view)
     SurfaceView surfaceView;
     Unbinder unbinder;
@@ -77,13 +81,14 @@ public class VedioFragment extends Fragment {
         unbinder = ButterKnife.bind(this, view);
         return view;
     }
-    String[] permissions = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,Manifest.permission.WRITE_EXTERNAL_STORAGE};
+
+    String[] permissions = new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE};
 
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        EasyPermissions.onRequestPermissionsResult(requestCode,permissions,grantResults,this);
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
     }
 
     @Override
@@ -91,9 +96,9 @@ public class VedioFragment extends Fragment {
         super.onActivityCreated(savedInstanceState);
 
 
-        if(!EasyPermissions.hasPermissions(getContext(),permissions)){
+        if (!EasyPermissions.hasPermissions(getContext(), permissions)) {
 
-            EasyPermissions.requestPermissions(this,"",1,permissions);
+            EasyPermissions.requestPermissions(this, "", 1, permissions);
 
         }
 
@@ -102,13 +107,59 @@ public class VedioFragment extends Fragment {
         String path = Environment.getExternalStorageDirectory() + File.separator + "a.mp4";
         try {
             mediaPlayer.setDataSource(path);
+            mediaPlayer.setLooping(true);
             SurfaceHolder holder = surfaceView.getHolder();
 
-            mediaPlayer.prepare();
+
+            getActivity().getWindow().getDecorView().post(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        mediaPlayer.prepare();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+
 
             mediaPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
                 @Override
                 public void onPrepared(MediaPlayer mp) {
+
+                    int sW = surfaceView.getWidth();
+                    int sH = surfaceView.getHeight();
+                    int vW = mp.getVideoWidth();
+                    int vH = mp.getVideoHeight();
+
+
+
+
+
+                    float ratio =  vW*1.0f/vH;
+
+                    int sfW,sfH;
+
+                    if(ratio > 1){
+                        sfW = sW;
+                        sfH = (int) (sfW / ratio);
+                    }else{
+                        sfW = sW;
+                        sfH = (int) (sfW / ratio);
+                    }
+
+
+                    mp.setVideoScalingMode(1);
+
+
+
+
+                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(sfW,sfH);
+
+                    layoutParams.gravity = Gravity.CENTER;
+                    surfaceView.setLayoutParams(layoutParams);
+
                     mediaPlayer.start();
                 }
             });
@@ -120,6 +171,8 @@ public class VedioFragment extends Fragment {
 
                 @Override
                 public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+
+                    Log.e(TAG, "surfaceChanged --->format = " + format + ", width = " + width + ",height = " + height);
 
                 }
 
